@@ -1,3 +1,3 @@
 # Algorithmn
 Learning Algorithms
-![chip](https://raw.githubusercontent.com/kid-od/Algorithmn/main/芯片/IMG_814BE50FD33F-1.jpeg)
+![描述](https://raw.githubusercontent.com/用户名/仓库名/分支名/images/pic.png)
