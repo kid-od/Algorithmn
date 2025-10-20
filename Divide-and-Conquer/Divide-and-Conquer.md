@@ -137,9 +137,86 @@ int main() {
 
 问题3：请查阅[visualgo.net](https://visualgo.net/)网站；实现QuickSort算法。请严格按其算法描述实现。
 
+
+
  
 
 ![img](https://p.cldisk.com/star3/418_183Q50/c56d8b1b252f2a67b27ee4126b955159.png?rw=418&rh=183&_fileSize=306737&_orientation=1)
+
+
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// 交换数组中两个元素的值
+void swap(int *a, int *b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+int partition(int arr[], int low, int high) {
+    // 设置第一个元素为 pivot
+    int pivot = arr[low];
+    int pivotIndex = low;
+    int storeIndex = pivotIndex + 1;
+
+    // 初始化随机数生成器
+    srand((unsigned int)time(NULL));
+
+    for (int i = pivotIndex + 1; i <= high; i++) {
+        // 处理小于 pivot 的情况，或者相等但 50% 概率的情况
+        if (arr[i] < pivot || (arr[i] == pivot && rand() % 2 == 0)) {
+            swap(&arr[i], &arr[storeIndex]);
+            storeIndex++;
+        }
+    }
+
+    // 将 pivot 放到正确的位置
+    swap(&arr[pivotIndex], &arr[storeIndex - 1]);
+
+    // 返回 pivot 的最终位置
+    return storeIndex - 1;
+}
+
+// 快速排序函数
+void quickSort(int arr[], int low, int high) {
+    if (low < high) {
+        // 分区，得到 pivot 的位置
+        int pivotPos = partition(arr, low, high);
+
+        // 对 pivot 左边的子数组进行排序
+        quickSort(arr, low, pivotPos - 1);
+        // 对 pivot 右边的子数组进行排序
+        quickSort(arr, pivotPos + 1, high);
+    }
+}
+
+int main() {
+    int arr[] = {5, 2, 9, 1, 5, 6};
+    int n = sizeof(arr) / sizeof(arr[0]);
+
+    printf("原始数组：");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+
+    quickSort(arr, 0, n - 1);
+
+    printf("排序后数组：");
+    for (int i = 0; i < n; i++) {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+
+    return 0;
+}
+```
+
+
 
 
 
@@ -182,6 +259,73 @@ Hoare 划分方案**<u>选择一个元素作为枢轴，通常选择数组的第
  
 
 问题4：请查阅[visualgo.net](https://visualgo.net/)网站；实现Random QuickSort算法。请严格按算法描述实现。
+
+**代码**
+
+```c 
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// 交换两个元素
+void swap(int *a, int *b) {
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+// Lomuto 划分
+int partition(int arr[], int left, int right) {
+    int pivot = arr[right]; // 枢轴在右侧
+    int i = left;
+    for (int j = left; j < right; j++) {
+        if (arr[j] <= pivot) {
+            swap(&arr[i], &arr[j]);
+            i++;
+        }
+    }
+    swap(&arr[i], &arr[right]);
+    return i;
+}
+
+// 随机选择枢轴并划分
+int randomPartition(int arr[], int left, int right) {
+    int pivotIndex = left + rand() % (right - left + 1); // 随机选枢轴
+    swap(&arr[pivotIndex], &arr[right]); // 交换到最后
+    return partition(arr, left, right);
+}
+
+// Random QuickSort
+void randomQuickSort(int arr[], int left, int right) {
+    if (left < right) {
+        int pi = randomPartition(arr, left, right);
+        randomQuickSort(arr, left, pi - 1);
+        randomQuickSort(arr, pi + 1, right);
+    }
+}
+
+// 测试
+int main() {
+    srand(time(NULL)); // 初始化随机数种子
+
+    int arr[] = {10, 7, 8, 9, 1, 5};
+    int n = sizeof(arr)/sizeof(arr[0]);
+
+    printf("排序前: ");
+    for(int i=0;i<n;i++) printf("%d ", arr[i]);
+    printf("\n");
+
+    randomQuickSort(arr, 0, n-1);
+
+    printf("排序后: ");
+    for(int i=0;i<n;i++) printf("%d ", arr[i]);
+    printf("\n");
+
+    return 0;
+}
+```
+
+
 
  
 
