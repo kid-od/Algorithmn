@@ -351,9 +351,17 @@ int main() {
 
 ### **分治法解决方案**
 
-1. **排序阶段：** 将点集 P 按照 x 坐标排序。
-2. **递归阶段：** 将排序后的点集分成两部分，分别递归求解每部分中距离最小的两个点。
-3. **合并阶段：** 在合并阶段，检查跨越中线的点对的距离，更新最小距离。
+1. **分（Divide）**
+   - 将点集按 x 坐标排序（预处理，便于划分）。
+   - 以中点为界，将点集分为左半部分`L`和右半部分`R`。
+2. **治（Conquer）**
+   - 递归求解左半部分`L`的最近点对距离`d1`。
+   - 递归求解右半部分`R`的最近点对距离`d2`。
+   - 取`d = min(d1, d2)`作为当前已知的最小距离。
+3. **合（Combine）**
+   - 关键步骤：检查「跨左右两部分」的点对是否存在距离小于`d`的情况（因为最近点对可能分别在`L`和`R`中）。
+   - 筛选出 x 坐标与中点 x 坐标之差小于`d`的点（这些点才可能形成跨区域的更近点对），记为集合`S`。
+   - 将`S`按 y 坐标排序，对每个点只与后续最多 6 个点比较（几何性质保证：在`d×2d`的矩形内最多有 6 个点），更新最小距离`d`。
 
 
 
@@ -365,7 +373,144 @@ int main() {
 
 当查阅解决方案后，你有什么启发。
 
-**对于小规模点集，可以直接使用分治法或暴力法，而在大规模点集中，则必须依靠空间索引结构，如 kd-tree 或网格，以提高效率。此外，空间划分与剪枝是分治法和 kd-tree 的核心思想，通过对局部区域的判断，能够有效减少不必要的比较，从而显著降低时间复杂度。**
+**对于小规模点集，可以直接使用分治法或暴力法，而在大规模点集中，则必须依靠空间索引结构，如构建 kd 树（一种多维空间索引结构），通过树结构高效检索最近邻点，以提高效率。此外，空间划分与剪枝是分治法和 kd-tree 的核心思想，通过对局部区域的判断，能够有效减少不必要的比较，从而显著降低时间复杂度。**
+
+
+
+代码
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <limits.h>
+
+// 点结构定义
+typedef struct {
+    double x, y;
+} Point;
+
+// 存储最近点对及距离
+typedef struct {
+    Point p1, p2;
+    double dist;
+} Result;
+
+// 计算两点距离的平方（避免开方，提高效率）
+double dist_sq(Point a, Point b) {
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    return dx*dx + dy*dy;
+}
+
+// 计算两点距离
+double distance(Point a, Point b) {
+    return sqrt(dist_sq(a, b));
+}
+
+// 比较函数：按x坐标排序
+int compare_x(const void* a, const void* b) {
+    Point* p1 = (Point*)a;
+    Point* p2 = (Point*)b;
+    return (p1->x - p2->x) > 0 ? 1 : -1;
+}
+
+// 比较函数：按y坐标排序
+int compare_y(const void* a, const void* b) {
+    Point* p1 = (Point*)a;
+    Point* p2 = (Point*)b;
+    return (p1->y - p2->y) > 0 ? 1 : -1;
+}
+
+// 暴力法：求解小规模点集的最近点对
+Result brute_force(Point P[], int n) {
+    Result res;
+    res.dist = INFINITY;
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            double d = dist_sq(P[i], P[j]);
+            if (d < res.dist) {
+                res.dist = d;
+                res.p1 = P[i];
+                res.p2 = P[j];
+            }
+        }
+    }
+    res.dist = sqrt(res.dist);  // 最终转换为实际距离
+    return res;
+}
+
+// 合并步骤：检查跨区域的最近点对
+Result merge(Point strip[], int size, double d, Result best) {
+    qsort(strip, size, sizeof(Point), compare_y);  // 按y排序
+
+    // 每个点只与后续最多6个点比较
+    for (int i = 0; i < size; i++) {
+        for (int j = i + 1; j < size && (strip[j].y - strip[i].y) < d; j++) {
+            double dist = distance(strip[i], strip[j]);
+            if (dist < best.dist) {
+                best.dist = dist;
+                best.p1 = strip[i];
+                best.p2 = strip[j];
+            }
+        }
+    }
+    return best;
+}
+
+// 分治法递归函数
+Result closest_recursive(Point P[], int n) {
+    // 小规模点集直接用暴力法
+    if (n <= 3) {
+        return brute_force(P, n);
+    }
+
+    // 找中点
+    int mid = n / 2;
+    Point mid_point = P[mid];
+
+    // 递归求解左右两部分
+    Result left = closest_recursive(P, mid);
+    Result right = closest_recursive(P + mid, n - mid);
+
+    // 取左右部分的最小距离
+    Result best = (left.dist < right.dist) ? left : right;
+
+    // 筛选x在中点附近[mid.x - d, mid.x + d]的点
+    Point strip[n];
+    int strip_size = 0;
+    for (int i = 0; i < n; i++) {
+        if (fabs(P[i].x - mid_point.x) < best.dist) {
+            strip[strip_size++] = P[i];
+        }
+    }
+
+    // 检查跨区域点对，更新最优解
+    return merge(strip, strip_size, best.dist, best);
+}
+
+// 主函数：求解最近点对
+Result closest_pair(Point P[], int n) {
+    qsort(P, n, sizeof(Point), compare_x);  // 预处理：按x排序
+    return closest_recursive(P, n);
+}
+
+// 示例
+int main() {
+    Point P[] = {{2, 3}, {12, 30}, {40, 50}, {5, 1}, {12, 10}, {3, 4}};
+    int n = sizeof(P) / sizeof(P[0]);
+
+    Result res = closest_pair(P, n);
+    printf("最近点对：\n");
+    printf("点1: (%.2f, %.2f)\n", res.p1.x, res.p1.y);
+    printf("点2: (%.2f, %.2f)\n", res.p2.x, res.p2.y);
+    printf("距离: %.2f\n", res.dist);
+
+    return 0;
+}
+```
+
+
 
  
 
